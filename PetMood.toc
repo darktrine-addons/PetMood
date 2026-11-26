@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: PetMood
+## Notes: Hunter pet happiness at a glance: movable icon, broker feed and an alert when your pet's mood drops.
+## Author: artherion77
+## Version: @project-version@
+## Category: Hunter
+## IconTexture: Interface\Icons\Ability_Hunter_BeastTraining
+## SavedVariables: PetMoodDB
+## OptionalDeps: LibStub, LibDataBroker-1.1
+
+PetMood.lua

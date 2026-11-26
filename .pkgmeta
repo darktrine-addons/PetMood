@@ -1,0 +1,12 @@
+package-as: PetMood
+
+enable-nolib-creation: no
+
+# Curated per-release notes posted verbatim to CurseForge / Wago. RELEASE.md
+# holds ONLY the current version (+ links); full history lives in CHANGELOG.md.
+manual-changelog:
+    filename: RELEASE.md
+    markup-type: markdown
+
+ignore:
+    - RELEASE.md
