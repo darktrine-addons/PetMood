@@ -14,7 +14,7 @@ local CLASSIC_FILE = "Interface\\PetPaperDollFrame\\UI-PetHappiness"
 local UNKNOWN_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
 local FEED_PET_SPELL_ID = 6991
 local FULL_VALUE_LEVELS = 10      -- food within this many levels below the pet is assumed to give full happiness
-local DEFAULTS = {locked = false, alert = true, sound = true}
+local DEFAULTS = {locked = false, alert = true, sound = true, hideHappy = false}
 
 BINDING_HEADER_PETMOOD = "PetMood"
 _G["BINDING_NAME_CLICK PetMoodFrame:LeftButton"] = "Feed pet"
@@ -137,7 +137,9 @@ end
 local function applySecure()
 	if InCombatLockdown() then secureDirty = true; return end
 	secureDirty = nil
-	frame:SetShown((state.hasPet and state.isHunterPet) or not db.locked)
+	-- Unlocked: always shown for placing. Locked: only with a hunter pet, and optionally only when it needs food
+	local needed = state.hasPet and state.isHunterPet and not (db.hideHappy and state.mood and state.raw == 3)
+	frame:SetShown(needed or not db.locked)
 	if db.locked and food then
 		frame:SetAttribute("type1", "spell")
 		frame:SetAttribute("spell1", C_Spell.GetSpellName(FEED_PET_SPELL_ID) or FEED_PET_SPELL_ID)
@@ -178,9 +180,9 @@ end
 local broker
 local function refresh()
 	query()
-	checkDrop()
 	state.iconMode = applyIcon(tex, state.mood)
-	applySecure()
+	applySecure()             -- before checkDrop, so a hidden-while-Happy icon is back in time for the alert pulse
+	checkDrop()
 	if not pulse:IsPlaying() then frame:SetAlpha(state.mood and 1 or 0.5) end
 	if broker then
 		if state.mood then
@@ -338,7 +340,7 @@ SlashCmdList.PETMOOD = function(msg)
 		chat(("api=%s raw=%s damage=%s loyalty=%s err=%s"):format(state.api, tostring(state.raw), tostring(state.damage), tostring(state.loyalty), tostring(state.err)))
 		chat(("atlases: Mad=%s Neutral=%s Happiness=%s | icon=%s"):format(tostring(atlasExists("UI-PetMad")), tostring(atlasExists("UI-PetNeutral")), tostring(atlasExists("UI-PetHappiness")), tostring(state.iconMode)))
 		chat(("food: %d in bags, best=%s (bag %s slot %s), feed click=%s"):format(foodCount, food and (food.link or food.itemID) or "none", food and food.bag or "-", food and food.slot or "-", tostring(frame:GetAttribute("type1"))))
-		chat(("broker=%s shown=%s locked=%s"):format(broker and "yes" or "no (no LibDataBroker loaded)", tostring(frame:IsShown()), tostring(db.locked)))
+		chat(("broker=%s shown=%s locked=%s hideHappy=%s"):format(broker and "yes" or "no (no LibDataBroker loaded)", tostring(frame:IsShown()), tostring(db.locked), tostring(db.hideHappy)))
 	elseif msg == "reset" then
 		db.point = nil
 		chat(place() and "position reset" or "can't move the icon in combat")
@@ -346,6 +348,10 @@ SlashCmdList.PETMOOD = function(msg)
 		if InCombatLockdown() then chat("can't lock or unlock in combat"); return end
 		db.locked = not db.locked
 		chat(db.locked and "icon locked: click to feed, hidden without a hunter pet" or "icon unlocked: drag to move (feeding is off while unlocked)")
+		refresh()
+	elseif msg == "happy" then
+		db.hideHappy = not db.hideHappy
+		chat("hide icon while the pet is Happy " .. onOff(db.hideHappy) .. (InCombatLockdown() and " (applies after combat)" or ""))
 		refresh()
 	elseif msg == "alert" then
 		db.alert = not db.alert; chat("mood drop alert " .. onOff(db.alert))
@@ -356,6 +362,7 @@ SlashCmdList.PETMOOD = function(msg)
 	else
 		chat("commands:")
 		chat("  /petmood lock - lock/unlock the icon (locked: click to feed; unlocked: drag to move)")
+		chat(("  /petmood happy - hide the locked icon while the pet is Happy (%s)"):format(onOff(db.hideHappy)))
 		chat(("  /petmood alert - mood drop alert (%s)"):format(onOff(db.alert)))
 		chat(("  /petmood sound - alert sound (%s)"):format(onOff(db.sound)))
 		chat("  /petmood test - show a test alert")

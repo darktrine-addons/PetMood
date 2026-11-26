@@ -12,6 +12,7 @@ WoW Forever only (Interface 16001). Retail pets have no happiness.
 - **Broker feed.** The coloured mood text and icon in any LibDataBroker display.
 - **Click to feed.** Click the locked icon, or press its key binding, to feed your pet. PetMood picks the food from your bags: the lowest-level food your pet eats that is still close to its level, keeping your better food for later. The tooltip shows the pet's diet and how much food you carry.
 - **Mood drop alert.** A centre-screen warning, a chat line and a sound when the mood drops from Happy to Content or from Content to Unhappy. Fights are never interrupted: alerts from combat are shown once it ends.
+- **Only when needed.** Optionally hide the icon while your pet is Happy, so it only appears when there is something to do. The key binding keeps working.
 - **Quiet in combat.** Tooltips stay closed while you are in combat.
 
 ## Commands
@@ -19,6 +20,7 @@ WoW Forever only (Interface 16001). Retail pets have no happiness.
 | Command | Effect |
 |---|---|
 | `/petmood lock` | Lock or unlock the icon (locked: click to feed; unlocked: drag to move) |
+| `/petmood happy` | Hide the locked icon while your pet is Happy |
 | `/petmood alert` | Turn the mood drop alert on or off |
 | `/petmood sound` | Turn the alert sound on or off |
 | `/petmood test` | Show a test alert |
