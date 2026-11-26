@@ -4,7 +4,7 @@
 
 A small movable icon shows whether your pet is Happy, Content or Unhappy. The same information is available as a LibDataBroker feed for broker bars such as Bazooka, Titan Panel or ElvUI. When your pet's mood drops, PetMood warns you in the middle of the screen with a sound. If that happens during a fight, the warning waits until combat ends.
 
-WoW Forever only (Interface 16001). Retail pets have no happiness.
+WoW Forever only (Interface 16001). Retail pets have no happiness. PetMood only runs on hunters; on other characters it stays inactive, so it is safe to keep enabled for all of them.
 
 ## Features
 

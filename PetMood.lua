@@ -1,6 +1,9 @@
 -- PetMood: hunter pet happiness indicator for WoW Forever (icon + LibDataBroker feed).
 local ADDON = ...
 
+-- Hunters only: on other classes nothing is created (no icon, broker feed, events or slash command)
+if select(2, UnitClass("player")) ~= "HUNTER" then return end
+
 local MOODS = {
 	[1] = {label = "Unhappy", color = "ff4040", atlas = "UI-PetMad",       coords = {0.375, 0.5625, 0, 0.359375}},
 	[2] = {label = "Content", color = "ffd040", atlas = "UI-PetNeutral",   coords = {0.1875, 0.375, 0, 0.359375}},

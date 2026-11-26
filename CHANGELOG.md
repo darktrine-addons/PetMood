@@ -13,3 +13,4 @@
 
 ### Improvements
 - Tooltips don't open in combat.
+- Inactive on non-hunter characters: no icon and no broker entry.
