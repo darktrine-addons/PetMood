@@ -12,12 +12,18 @@ PetMood shows your pet's happiness as a small icon you can move anywhere on scre
 - **One-click feeding.** Click the icon, or press a key you bind, to feed your pet. PetMood picks the food itself: something your pet eats and that is close enough to its level, keeping your better food for later. While your pet eats, a timer sweeps over the icon.
 - **Everything in the tooltip.** Mood, damage bonus, loyalty, your pet's diet and how much food you carry, plus your pet's level, XP and an estimate of the time to its next level.
 - **Broker support.** Also shows the mood, your food count and your pet's level progress in Bazooka, Titan Panel, ElvUI and other LibDataBroker displays.
+- **Your choice of food.** Drag items from your bags onto the *Excluded food* list, and PetMood will never feed them to your pet.
 - **Out of your way.** Optionally hide the icon while your pet is Happy. No tooltips in combat. Inactive on characters that aren't hunters, so you can leave it enabled for all of them.
+
+## Options
+
+Type `/petmood`, or open *Options → AddOns → PetMood*, to set the icon size, switch the icon, food count, glow, one-click feeding, alerts and broker display on or off, and manage the excluded food.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `/petmood` | Open the options |
 | `/petmood lock` | Lock the icon (click to feed) or unlock it (drag to move) |
 | `/petmood happy` | Hide the icon while your pet is Happy |
 | `/petmood glow` | Turn the glow on or off |
@@ -25,6 +31,8 @@ PetMood shows your pet's happiness as a small icon you can move anywhere on scre
 | `/petmood alert` | Turn the mood drop alert on or off |
 | `/petmood sound` | Turn the alert sound on or off |
 | `/petmood test` | Show a test alert |
+| `/petmood exclude <item>` | Never feed this item (shift-click it into chat) |
+| `/petmood include <item>` | Allow the item again |
 | `/petmood reset` | Move the icon back to the centre of the screen |
 
 To feed with a key, bind one under **Key Bindings → AddOns → PetMood**.

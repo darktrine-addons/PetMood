@@ -1,8 +1,9 @@
 -- PetMood: hunter pet happiness indicator for WoW Forever (icon + LibDataBroker feed).
-local ADDON = ...
+local ADDON, ns = ...
 
--- Hunters only: on other classes nothing is created (no icon, broker feed, events or slash command)
+-- Hunters only: on other classes nothing is created (no icon, broker feed, events, options or slash command)
 if select(2, UnitClass("player")) ~= "HUNTER" then return end
+ns.active = true
 
 local MOODS = {
 	[1] = {label = "Unhappy", color = "ff4040", rgb = {1, 0.2, 0.2},  atlas = "UI-PetMad",       coords = {0.375, 0.5625, 0, 0.359375}},
@@ -22,7 +23,11 @@ local FULL_VALUE_LEVELS = 10      -- food within this many levels below the pet 
 local LOW_FOOD = 10               -- food count shown in red at or below this
 local XP_WINDOW = 900             -- seconds of XP gains used for the time-to-level estimate
 local REMINDER_COOLDOWN = 60      -- seconds between pre-pull reminders
-local DEFAULTS = {locked = false, alert = true, sound = true, hideHappy = false, glow = true, reminder = true}
+local DEFAULTS = {
+	locked = false, alert = true, sound = true, hideHappy = false, glow = true, reminder = true,
+	showIcon = true, iconSize = 24, showCount = true, clickFeed = true, showBroker = true,
+}
+ns.DEFAULTS = DEFAULTS
 
 BINDING_HEADER_PETMOOD = "PetMood"
 _G["BINDING_NAME_CLICK PetMoodFrame:LeftButton"] = "Feed pet"
@@ -85,7 +90,7 @@ local function scanFood()
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
 			local info = C_Container.GetContainerItemInfo(bag, slot)
 			local id = info and info.itemID
-			if id then
+			if id and not db.exclude[id] then                  -- excluded items are never fed and not counted
 				if canEat[id] == nil then
 					local ok, res = pcall(C_PetInfo.CanPetEatItem, id)
 					canEat[id] = ok and res == true
@@ -223,7 +228,7 @@ local function applyIcon(texture, mood)
 end
 
 local function applyDecorations()
-	if state.hasPet then
+	if state.hasPet and db.showCount then
 		countText:SetText(foodCount)
 		if foodCount <= LOW_FOOD then countText:SetTextColor(1, 0.25, 0.25) else countText:SetTextColor(1, 1, 1) end
 	else
@@ -238,14 +243,21 @@ local function applyDecorations()
 	end
 end
 
--- Visibility and click action of the secure icon; protected in combat, so deferred until it ends
+-- Size, visibility and click action of the secure icon; protected in combat, so deferred until it ends
 local function applySecure()
 	if InCombatLockdown() then secureDirty = true; return end
 	secureDirty = nil
+	local size = db.iconSize
+	if frame:GetWidth() ~= size then
+		frame:SetSize(size, size)
+		local out = math.floor(size / 4)
+		glow:ClearAllPoints()
+		glow:SetPoint("TOPLEFT", -out, out); glow:SetPoint("BOTTOMRIGHT", out, -out)
+	end
 	-- Unlocked: always shown for placing. Locked: only with a hunter pet, and optionally only when it needs food
 	local needed = state.hasPet and state.isHunterPet and not (db.hideHappy and state.mood and state.raw == 3)
-	frame:SetShown(needed or not db.locked)
-	if db.locked and food then
+	frame:SetShown(db.showIcon and (needed or not db.locked))
+	if db.locked and db.clickFeed and food then
 		frame:SetAttribute("type1", "spell")
 		frame:SetAttribute("spell1", C_Spell.GetSpellName(FEED_PET_SPELL_ID) or FEED_PET_SPELL_ID)
 		frame:SetAttribute("target-bag", food.bag)
@@ -397,7 +409,7 @@ local function fillTooltip(tt, isIcon)
 		if diet and #diet > 0 then line(tt, "Diet", table.concat(diet, ", ")) end
 		local low = foodCount <= LOW_FOOD and 0.4 or 1
 		line(tt, "Food in bags", tostring(foodCount), 1, low, low)
-		if isIcon and db.locked then
+		if isIcon and db.locked and db.clickFeed then
 			if food then
 				tt:AddLine("Click to feed: " .. (food.link or ("item " .. food.itemID)), 0.5, 0.8, 1)
 			else
@@ -437,7 +449,7 @@ end)
 frame:SetScript("OnEnter", function(self) showTooltip(self, true) end)
 frame:SetScript("OnLeave", hideTooltip)
 frame:HookScript("PostClick", function(_, button, down)
-	if button ~= "LeftButton" or down or not db.locked then return end
+	if button ~= "LeftButton" or down or not db.locked or not db.clickFeed then return end
 	if InCombatLockdown() then
 		chat("can't feed your pet in combat")
 	elseif not state.hasPet then
@@ -455,6 +467,31 @@ local function place()
 	return true
 end
 
+-- Broker feed: created at login or when switched on; LibDataBroker can't remove a feed, so switching off needs a reload
+local function ensureBroker()
+	if broker or not db.showBroker then return end
+	local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
+	if not LDB then return end
+	broker = LDB:GetDataObjectByName(ADDON) or LDB:NewDataObject(ADDON, {type = "data source", label = "Pet", text = "...",
+		icon = UNKNOWN_ICON, OnEnter = function(f) showTooltip(f, false) end, OnLeave = hideTooltip,
+		OnClick = function() rescan() end})
+end
+
+-- Item exclusion list (never fed, not counted)
+local function itemIDFromText(text)
+	return tonumber(text:match("item:(%d+)") or text:match("^%s*(%d+)%s*$"))
+end
+local function setExcluded(itemID, excluded)
+	db.exclude[itemID] = excluded or nil
+	rescan()
+	if ns.OnExclusionsChanged then ns.OnExclusionsChanged() end
+end
+
+-- What Options.lua needs
+ns.chat, ns.refresh, ns.rescan, ns.place = chat, function() refresh() end, function() rescan() end, place
+ns.ensureBroker, ns.setExcluded = function() ensureBroker(); refresh() end, setExcluded
+ns.testAlert = function() alert(2, true) end
+
 -- ---------------------------------------------------------------- events
 frame:RegisterEvent("PLAYER_LOGIN")
 frame:SetScript("OnEvent", function(self, event, unit)
@@ -462,13 +499,11 @@ frame:SetScript("OnEvent", function(self, event, unit)
 		PetMoodDB = PetMoodDB or {}
 		db = PetMoodDB
 		for k, v in pairs(DEFAULTS) do if db[k] == nil then db[k] = v end end
+		db.exclude = db.exclude or {}
+		ns.db = db
 		place()
-		local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
-		if LDB then
-			broker = LDB:NewDataObject(ADDON, {type = "data source", label = "Pet", text = "...", icon = UNKNOWN_ICON,
-				OnEnter = function(f) showTooltip(f, false) end, OnLeave = hideTooltip,
-				OnClick = function() rescan() end})
-		end
+		ensureBroker()
+		if ns.InitOptions then ns.InitOptions() end
 		for _, ev in ipairs({"UNIT_HAPPINESS", "UNIT_PET", "UNIT_LEVEL", "UNIT_AURA", "UNIT_PET_EXPERIENCE", "PET_UI_UPDATE",
 		                     "PLAYER_ENTERING_WORLD", "BAG_UPDATE_DELAYED", "READY_CHECK",
 		                     "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED"}) do
@@ -535,10 +570,19 @@ local TOGGLES = {
 }
 
 SLASH_PETMOOD1 = "/petmood"
-SlashCmdList.PETMOOD = function(msg)
-	msg = (msg or ""):lower():match("^%s*(%S*)")
+SlashCmdList.PETMOOD = function(input)
+	input = input or ""
+	local msg, rest = input:match("^%s*(%S*)%s*(.-)%s*$")
+	msg = msg:lower()
 	local toggle = TOGGLES[msg]
-	if toggle then
+	if msg == "" or msg == "config" or msg == "options" then
+		if ns.OpenOptions then ns.OpenOptions() end
+	elseif msg == "exclude" or msg == "include" then
+		local id = itemIDFromText(rest)
+		if not id then chat(("usage: /petmood %s <shift-click an item>"):format(msg)); return end
+		setExcluded(id, msg == "exclude")
+		chat(("%s %s"):format(select(2, C_Item.GetItemInfo(id)) or ("item " .. id), msg == "exclude" and "will not be fed to your pet" or "can be fed to your pet again"))
+	elseif toggle then
 		db[toggle.key] = not db[toggle.key]
 		chat(toggle.text .. " " .. onOff(db[toggle.key]))
 		refresh()
@@ -564,7 +608,9 @@ SlashCmdList.PETMOOD = function(msg)
 		alert(2, true)
 	else
 		chat("commands:")
+		chat("  /petmood - open the options")
 		chat("  /petmood lock - lock/unlock the icon (locked: click to feed; unlocked: drag to move)")
+		chat("  /petmood exclude <item> / include <item> - never feed this item / allow it again")
 		for _, name in ipairs({"happy", "glow", "alert", "sound", "reminder"}) do
 			chat(("  /petmood %s - %s (%s)"):format(name, TOGGLES[name].text, onOff(db[TOGGLES[name].key])))
 		end

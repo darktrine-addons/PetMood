@@ -10,3 +10,4 @@
 ## OptionalDeps: LibStub, LibDataBroker-1.1
 
 PetMood.lua
+Options.lua
